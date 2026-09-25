@@ -33,13 +33,18 @@ try {
   visit('@paperclipai/server');
   // Match release.sh's unified versioning in temporary staging directories.
   // Source manifests remain untouched, including independently versioned SDKs.
+  run(process.execPath, [join(repo, 'scripts/build-standalone-public-packages.mjs')], repo);
   run('bash', [join(repo, 'scripts/prepare-server-ui-dist.sh')], repo);
   const tarballs = [];
   for (const [index, name] of [...needed].entries()) {
     const { dir, manifest } = packages.get(name);
     const target = join(root, `package-${index}`); mkdirSync(target);
     const stagedSource = join(root, `source-${index}`); mkdirSync(stagedSource);
-    for (const file of manifest.files ?? ['dist']) cpSync(join(repo, dir, file), join(stagedSource, file), { recursive: true });
+    for (const file of manifest.files ?? ['dist']) {
+      // release.sh stages runtime skills into these public packages before pack.
+      const releaseSkills = file === 'skills' && ['server', 'packages/adapters/claude-local', 'packages/adapters/codex-local'].includes(dir);
+      cpSync(releaseSkills ? join(repo, 'skills') : join(repo, dir, file), join(stagedSource, file), { recursive: true });
+    }
     const releaseManifest = { ...manifest, version: releaseVersion };
     writeFileSync(join(stagedSource, 'package.json'), JSON.stringify(releaseManifest));
     if ((manifest.bundleDependencies ?? manifest.bundledDependencies ?? []).length) {
