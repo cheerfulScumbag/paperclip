@@ -112,6 +112,9 @@ describe("Cloud remote provider pack", () => {
     const cloud = stageBody(dockerfile, "cloud");
     expect(pack).toContain('PAPERCLIP_RUNNER_SOURCE_REVISION="${PAPERCLIP_BUILD_COMMIT}"');
     expect(pack).toContain("build-provider-pack.mjs /provider-pack");
+    expect(pack).toContain('if [ -n "${PAPERCLIP_BUILD_COMMIT}" ]; then');
+    expect(pack).toContain("mkdir -p /provider-pack");
+    expect(pack).toContain("Skipping remote provider pack");
     expect(cloud).toContain("--from=cloud-provider-pack /provider-pack /opt/paperclip-runner/provider-pack");
     expect(cloud).toContain("PAPERCLIP_RUNNER_REMOTE_PROVIDER_PACK_PATH=/opt/paperclip-runner/provider-pack");
     expect(dockerfile).not.toContain("provision-grok.mjs");

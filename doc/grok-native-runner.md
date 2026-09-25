@@ -109,3 +109,6 @@ sets `PAPERCLIP_RUNNER_REMOTE_PROVIDER_PACK_PATH`. Remote ACPX execution verifie
 the sandbox against that pack before using it, or stages the matching pack when
 needed. The Cloud controller image does not install the native Grok executable;
 the selected sandbox image must provide the prerequisite above.
+Cloud builds must supply the full source SHA through `PAPERCLIP_BUILD_COMMIT`
+to produce that verified pack. Unstamped local Cloud builds still work for other
+features, but omit the pack and cannot start remote ACPX sessions.

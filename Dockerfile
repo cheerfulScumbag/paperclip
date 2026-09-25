@@ -297,7 +297,14 @@ RUN set -eu; \
 # sandbox installation or stage matching assets. Grok's native executable stays
 # an external sandbox prerequisite; this pack contains only its launcher.
 FROM build AS cloud-provider-pack
-RUN PAPERCLIP_RUNNER_SOURCE_REVISION="${PAPERCLIP_BUILD_COMMIT}" node packages/paperclip-runner/scripts/build-provider-pack.mjs /provider-pack
+# Unstamped local builds remain usable, but cannot qualify a remote pack.
+# Never invent a source revision to make an unqualified pack look verified.
+RUN mkdir -p /provider-pack \
+  && if [ -n "${PAPERCLIP_BUILD_COMMIT}" ]; then \
+    PAPERCLIP_RUNNER_SOURCE_REVISION="${PAPERCLIP_BUILD_COMMIT}" node packages/paperclip-runner/scripts/build-provider-pack.mjs /provider-pack; \
+  else \
+    echo "Skipping remote provider pack: supply a full PAPERCLIP_BUILD_COMMIT to enable remote ACPX execution"; \
+  fi
 
 FROM production AS cloud
 COPY --chown=node:node --from=cloud-provider-pack /provider-pack /opt/paperclip-runner/provider-pack
