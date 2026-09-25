@@ -43,6 +43,9 @@ try {
     for (const file of manifest.files ?? ['dist']) {
       // release.sh stages runtime skills into these public packages before pack.
       const releaseSkills = file === 'skills' && ['server', 'packages/adapters/claude-local', 'packages/adapters/codex-local'].includes(dir);
+      // Other adapters declare an optional skills directory that npm pack omits
+      // when absent. Do not fabricate extra release payloads for those adapters.
+      if (file === 'skills' && !releaseSkills && !existsSync(join(repo, dir, file))) continue;
       cpSync(releaseSkills ? join(repo, 'skills') : join(repo, dir, file), join(stagedSource, file), { recursive: true });
     }
     const releaseManifest = { ...manifest, version: releaseVersion };
