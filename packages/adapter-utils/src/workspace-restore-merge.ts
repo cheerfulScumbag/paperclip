@@ -232,8 +232,13 @@ export function classifyWorkspaceRestoreFailure(error: unknown): WorkspaceRestor
   if (code === "EACCES" || code === "EPERM") return "restore_permission_denied";
   if (code === WORKSPACE_RESTORE_LOCK_TIMEOUT_CODE) return "restore_lock_timeout";
   const message = error instanceof Error ? error.message : "";
+  const archiveRefused = /Daytona syncOut refusing (?:tarball (?:with an unparseable entry listing|(?:link whose target|member that) escapes the extraction dir)|unparseable or ambiguous (?:sym|hard)link entry)/.test(message);
+  const outboundPathRefused = /Daytona sync source path (?:is not a confined absolute path|escapes the workspace remote dir):/.test(message);
+  // These are the fail-closed guard's own exit codes. Transport/command failures
+  // with other exit codes retain the existing transient failure policy.
+  const outboundGuardRefused = /Daytona outbound symlink-escape guard command failed \(exit (?:40|41|42|44|45)\)/.test(message);
   if (code === "WORKSPACE_RESTORE_UNSAFE_ARCHIVE" ||
-      /Daytona syncOut refusing (?:tarball (?:link whose target|member that) escapes the extraction dir|unparseable or ambiguous (?:sym|hard)link entry)/.test(message)) {
+      archiveRefused || outboundPathRefused || outboundGuardRefused) {
     return "restore_unsafe_archive";
   }
   return "restore_failed";

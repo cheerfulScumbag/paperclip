@@ -381,7 +381,7 @@ const support = externalDatabaseUrl
         resolvedByUserId: status === "accepted" || status === "rejected" ? "board-user" : null,
         resolvedAt: status === "pending" ? null : new Date(),
         payload: { version: 1, prompt: "Review the scoped plan.", target: { type: "issue_document", key: "plan", revisionId } },
-        result: status === "pending" ? null : status === "expired" ? { outcome: "superseded_by_comment" } : { outcome: status },
+        result: status === "pending" ? null : { version: 1, outcome: status === "expired" ? "superseded_by_comment" : status },
       });
       const [run] = await db.update(heartbeatRuns).set({
         runtimeMode: "legacy", errorCode: "workspace_restore_failed", scheduledRetryAttempt: 1, scheduledRetryReason: "transient_failure",

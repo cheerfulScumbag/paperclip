@@ -182,7 +182,7 @@ A saved-plan link requires a stored document and its run-bound revision or a
 matching run-bound review record. Older unclassified failures use neutral wording. Diagnostics show only
 a validated relative member path, never an archive link target or host path.
 
-An unsafe archive keeps the existing execution recovery hold, including across
+An unsafe archive or an outbound confinement refusal keeps the existing execution recovery hold, including across
 conversation resets. It cannot start another model turn until an operator uses
 the existing recovery action to record `executionReconciliation` with
 `workspaceRepairEvidence` (20–12000 characters). This evidence must describe
