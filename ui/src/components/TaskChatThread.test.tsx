@@ -695,7 +695,7 @@ describe("TaskChatThread runtime transcript selection", () => {
     render(<TaskChatThread comments={[]} onAdd={async () => {}} linkedRuns={[{
       runId: "old-run", runtimeMode: "legacy", status: "failed", errorCode: "adapter_failed",
       agentId: "agent-1", agentName: "Runner", adapterType: "grok_local",
-      createdAt: "2026-08-25T18:00:00.000Z", finishedAt: "2026-08-25T18:00:02.000Z",
+      createdAt: "2026-08-25T18:00:00.000Z", startedAt: null, finishedAt: "2026-08-25T18:00:02.000Z",
     }]} />);
     expect(container.textContent).toContain("The run failed");
     expect(container.textContent).not.toContain("before returning an answer");
