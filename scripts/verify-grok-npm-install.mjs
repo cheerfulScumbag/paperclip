@@ -14,8 +14,10 @@ const prerequisite = '/opt/paperclip/providers/grok/1.0.13/grok';
 assert.equal(process.platform, 'linux', 'Run this verification on disposable EC2 Linux, not a developer host');
 assert.equal(existsSync(prerequisite), false, 'Refuse to overwrite a pre-existing sandbox prerequisite');
 const root = mkdtempSync(join(tmpdir(), 'paperclip-grok-public-install-'));
-const env = { ...process.env, NODE_PATH: '', npm_config_ignore_scripts: 'true', npm_config_audit: 'false', npm_config_fund: 'false' };
+const env = { ...process.env, NODE_PATH: '', PAPERCLIP_RELEASE_REUSE_UI_DIST: '1', npm_config_ignore_scripts: 'false', npm_config_audit: 'false', npm_config_fund: 'false' };
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, env, stdio: 'pipe', maxBuffer: 32 * 1024 * 1024 });
+const sourceRevision = run('git', ['rev-parse', 'HEAD'], repo).toString().trim();
+const releaseVersion = `0.0.0-grok-verify.${sourceRevision.slice(0, 12)}`;
 let provisioned = false;
 try {
   const listing = run(process.execPath, [join(repo, 'scripts/release-package-map.mjs'), 'list'], repo).toString().trim().split('\n').map(line => line.split('\t'));
@@ -29,22 +31,33 @@ try {
     }
   }
   visit('@paperclipai/server');
+  // Match release.sh's unified versioning in temporary staging directories.
+  // Source manifests remain untouched, including independently versioned SDKs.
+  run('bash', [join(repo, 'scripts/prepare-server-ui-dist.sh')], repo);
   const tarballs = [];
   for (const [index, name] of [...needed].entries()) {
     const { dir, manifest } = packages.get(name);
     const target = join(root, `package-${index}`); mkdirSync(target);
+    const stagedSource = join(root, `source-${index}`); mkdirSync(stagedSource);
+    for (const file of manifest.files ?? ['dist']) cpSync(join(repo, dir, file), join(stagedSource, file), { recursive: true });
+    const releaseManifest = { ...manifest, version: releaseVersion };
+    writeFileSync(join(stagedSource, 'package.json'), JSON.stringify(releaseManifest));
     if ((manifest.bundleDependencies ?? manifest.bundledDependencies ?? []).length) {
-      prepareBundledPackage(join(repo, dir), target);
+      prepareBundledPackage(stagedSource, target);
     } else {
-      for (const file of manifest.files ?? ['dist']) cpSync(join(repo, dir, file), join(target, file), { recursive: true });
-      writeFileSync(join(target, 'package.json'), JSON.stringify(materializePublishManifest(manifest)));
+      cpSync(stagedSource, target, { recursive: true });
+      writeFileSync(join(target, 'package.json'), JSON.stringify(materializePublishManifest(releaseManifest)));
     }
     run('npm', ['pack', '--ignore-scripts', '--pack-destination', root], target);
     const packed = readdirSync(root).filter(f => f.endsWith('.tgz') && !tarballs.includes(join(root, f)));
     assert.equal(packed.length, 1); tarballs.push(join(root, packed[0]));
   }
   const consumer = join(root, 'consumer'); mkdirSync(consumer); writeFileSync(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
-  run('npm', ['install', '--ignore-scripts', '--omit=dev', '--package-lock=false', ...tarballs], consumer);
+  run('npm', ['install', '--ignore-scripts=false', '--omit=dev', '--package-lock=false', ...tarballs], consumer);
+  for (const name of needed) {
+    const installedManifest = JSON.parse(readFileSync(join(consumer, 'node_modules', name, 'package.json'), 'utf8'));
+    assert.equal(installedManifest.version, releaseVersion, `Installed release version for ${name}`);
+  }
   assert.equal(existsSync(prerequisite), false, 'npm must not provision Grok');
   const server = join(consumer, 'node_modules/@paperclipai/server');
   const installed = join(server, 'dist/vendor/paperclip-runner');
@@ -67,7 +80,7 @@ try {
   provisioned = true;
   run('sudo', [process.execPath, join(repo, 'packages/paperclip-runner/scripts/provision-grok.mjs'), prerequisite]);
   run(process.execPath, ['probe.mjs', 'present'], consumer);
-  console.log(JSON.stringify({ schema: 'paperclip.grok.public-npm-install.v1', sourceRevision: run('git', ['rev-parse', 'HEAD'], repo).toString().trim(), cleanNpmInstall: true, packageCount: needed.size, builtinLauncherPresent: true, separateGrokPackage: false, npmProvisionedBinary: false, missingPrerequisiteRejected: true, provisionedBinaryVerified: true, commandLeaseVerified: true, providerCalls: 0 }));
+  console.log(JSON.stringify({ schema: 'paperclip.grok.public-npm-install.v1', sourceRevision, releaseVersion, lifecycleScriptsEnabled: true, cleanNpmInstall: true, packageCount: needed.size, builtinLauncherPresent: true, separateGrokPackage: false, npmProvisionedBinary: false, missingPrerequisiteRejected: true, provisionedBinaryVerified: true, commandLeaseVerified: true, providerCalls: 0 }));
 } finally {
   if (provisioned) run('sudo', ['rm', '-f', prerequisite]);
   rmSync(root, { recursive: true, force: true });

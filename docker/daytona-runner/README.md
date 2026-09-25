@@ -108,7 +108,7 @@ lock against this value before installation. The fixed Dockerfile default is
 for standalone builds; it must not replace a campaign's verified lock digest.
 Refresh exact runtime versions and qualification digests together; never download
 dependencies when a task starts. Grok's additive native ACP profile keeps its
-qualified 1.0.13 executable at a verified package path. It does not replace the
+qualified 1.0.13 executable at the verified sandbox prerequisite path. It does not replace the
 legacy adapter's `grok` command on PATH.
 
 Native Grok is an image prerequisite at `/opt/paperclip/providers/grok/1.0.13/grok`.
