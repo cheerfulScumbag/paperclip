@@ -102,3 +102,10 @@ Do not run Docker on a developer laptop when using remote verification. The
 builds and broad source checks without provider credentials. It records the
 source revision, resolved lock digest and immutable image reference. Paid
 Product E2E remains behind the protected default-branch workflow and environment.
+
+
+The Cloud application image also carries the controller-owned provider pack and
+sets `PAPERCLIP_RUNNER_REMOTE_PROVIDER_PACK_PATH`. Remote ACPX execution verifies
+the sandbox against that pack before using it, or stages the matching pack when
+needed. The Cloud controller image does not install the native Grok executable;
+the selected sandbox image must provide the prerequisite above.
